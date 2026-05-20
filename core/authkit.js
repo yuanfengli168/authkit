@@ -228,6 +228,22 @@ export const AuthKit = {
     await render(container, _config, getAuth_(), getApp_());
   },
 
+  async saveKey({ name, label, value }) {
+    const state = getState();
+    if (state.status !== 'authenticated' || !state.user) throw new Error('Not authenticated');
+    const { getFirestoreClient, saveKey: _saveKey } = await import('./firestore.js');
+    const db = await getFirestoreClient(getApp_());
+    return _saveKey(db, state.user.uid, { name: name || label || 'key', value });
+  },
+
+  async getSavedKeys() {
+    const state = getState();
+    if (state.status !== 'authenticated' || !state.user) throw new Error('Not authenticated');
+    const { getFirestoreClient, getSavedKeys: _getKeys } = await import('./firestore.js');
+    const db = await getFirestoreClient(getApp_());
+    return _getKeys(db, state.user.uid);
+  },
+
   registerProvider(module) {
     _registerProvider(module);
   },
