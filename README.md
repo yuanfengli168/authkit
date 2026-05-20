@@ -2,6 +2,9 @@
 
 A drop-in Firebase authentication component for static web apps. No build step, no bundler, pure ES Modules.
 
+🔗 **Live Demo:** https://yuanfengli168.github.io/authkit/demo/
+📦 **Repo:** https://github.com/yuanfengli168/authkit
+
 ## What is AuthKit?
 
 AuthKit is a lightweight, self-contained authentication library built on Firebase Auth. It provides:
