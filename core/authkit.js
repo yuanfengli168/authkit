@@ -145,7 +145,7 @@ export const AuthKit = {
     if (_config.loginMode === 'inline') {
       const { createInline } = await import('../ui/inline.js');
       _inline = createInline(anchor, _config);
-      _inline.build(_providers, auth, emailProvider);
+      _inline.update(_providers, auth);
 
       // Show/hide inline based on auth state
       subscribe((state) => {

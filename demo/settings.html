@@ -44,25 +44,27 @@
     <h1>Account Settings</h1>
   </div>
 
+  <!-- Hidden anchor for AuthKit modal init (keeps #settings-container clean) -->
+  <div id="ak-anchor" style="display:none"></div>
   <div id="settings-container"></div>
 
   <script type="module">
     import AuthKit from '../index.js';
 
-    // Replace firebaseConfig with your own project config
     const firebaseConfig = {
-      apiKey: "AIzaSyAftuF-eDxWOdIBrHvFE50Qt8X7F9XvLFQ",
-      authDomain: "ai-idea-generator-d9e15.firebaseapp.com",
-      projectId: "ai-idea-generator-d9e15",
-      storageBucket: "ai-idea-generator-d9e15.firebasestorage.app",
-      messagingSenderId: "997919258193",
-      appId: "1:997919258193:web:8c1ad1f323a82b683faa70"
+      apiKey: 'AIzaSy…vLFQ',
+      authDomain: 'ai-idea-generator-d9e15.firebaseapp.com',
+      projectId: 'ai-idea-generator-d9e15',
+      storageBucket: 'ai-idea-generator-d9e15.firebasestorage.app',
+      messagingSenderId: '997919258193',
+      appId: '1:997919258193:web:8c1ad1f323a82b683faa70'
     };
 
+    // Init with a separate hidden anchor so the modal doesn't clobber #settings-container
     await AuthKit.init({
       firebase: firebaseConfig,
       enabledProviders: ['google', 'email'],
-      anchor: '#settings-container',
+      anchor: '#ak-anchor',
       loginMode: 'modal',
       theme: 'auto',
       brandName: 'AuthKit Demo',
@@ -78,8 +80,8 @@
       },
     });
 
-    // Render the settings panel
-    AuthKit.renderSettings('#settings-container');
+    // renderSettings awaits auth state internally before rendering
+    await AuthKit.renderSettings('#settings-container');
   </script>
 </body>
 </html>

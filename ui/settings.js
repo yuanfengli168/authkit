@@ -82,8 +82,16 @@ export async function render(container, config, auth, app) {
   const state = getState();
   if (state.status !== 'authenticated' || !state.user) {
     container.append(ce('p', { className: 'ak-settings-loading' }, 'Loading…'));
-    // Wait for auth state
+    // Wait for a genuine Firebase resolution — skip the cold initial state.
+    // subscribe() fires immediately; we use `settled` to ignore the first
+    // synchronous call when Firebase hasn't resolved yet.
+    let settled = state.status === 'loading' ? false : true;
     const unsub = subscribe(async (s) => {
+      if (!settled) {
+        // First call is the cold initial state — only act if it's already resolved
+        settled = (s.status === 'authenticated' || s.status === 'unauthenticated');
+        if (!settled) return; // still loading, wait for next dispatch
+      }
       if (s.status === 'authenticated' && s.user) {
         unsub();
         await render(container, config, auth, app);
