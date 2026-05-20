@@ -62,12 +62,16 @@
     await AuthKit.init({
       firebase: firebaseConfig,
       enabledProviders: ['google', 'email'],
-      anchor: '#settings-container', // won't render login here — settings page
+      anchor: '#settings-container',
       loginMode: 'modal',
       theme: 'auto',
-      brandName: 'My App',
+      brandName: 'AuthKit Demo',
       baseUrl: '../',
-      afterLogout: 'index.html',
+      redirects: {
+        loginPage: 'index.html',
+        afterLogout: 'index.html',
+        afterLogin: null,
+      },
       settings: {
         enableSavedKeys: true,
         keysCollection: 'savedKeys',
