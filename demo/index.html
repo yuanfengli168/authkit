@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuthKit Demo</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #F9FAFB;
+      color: #111827;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 480px;
+      margin: 80px auto;
+      padding: 0 16px;
+    }
+    h1 {
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      color: #6B7280;
+      margin-bottom: 32px;
+    }
+    #auth-anchor {
+      margin-bottom: 32px;
+    }
+    #user-info {
+      display: none;
+      background: #fff;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 24px;
+    }
+    #user-info h2 { margin-top: 0; }
+    #user-info img {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .sign-out-btn {
+      margin-top: 16px;
+      padding: 8px 16px;
+      background: #EF4444;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    .settings-link {
+      display: inline-block;
+      margin-top: 8px;
+      color: #4F46E5;
+      text-decoration: none;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>AuthKit Demo</h1>
+    <p class="subtitle">A drop-in Firebase auth component for static web apps.</p>
+
+    <!-- Replace with your Firebase config -->
+    <!-- <div id="auth-anchor"></div> for inline mode -->
+    <div id="auth-anchor"></div>
+
+    <div id="user-info">
+      <h2>Welcome!</h2>
+      <img id="user-photo" src="" alt="Profile photo" style="display:none" />
+      <p><strong id="user-name"></strong></p>
+      <p id="user-email"></p>
+      <a href="settings.html" class="settings-link">⚙️ Account Settings</a>
+      <br />
+      <button class="sign-out-btn" onclick="AuthKit.signOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import AuthKit from '../index.js';
+
+    // Replace firebaseConfig with your own project config
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_PROJECT.firebaseapp.com",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_PROJECT.appspot.com",
+      messagingSenderId: "YOUR_SENDER_ID",
+      appId: "YOUR_APP_ID"
+    };
+
+    await AuthKit.init({
+      firebase: firebaseConfig,
+      enabledProviders: ['google', 'email'],
+      anchor: '#auth-anchor',
+      loginMode: 'inline',    // 'inline' or 'modal'
+      theme: 'auto',          // 'light', 'dark', or 'auto'
+      brandName: 'My App',
+      brandEmoji: '🚀',
+      loginTitle: 'Welcome to My App',
+      loginSubtitle: 'Sign in to continue',
+      googleAuthMode: 'popup', // 'popup' or 'redirect'
+      baseUrl: '../',         // base URL for loading providers
+      callbacks: {
+        afterLogin: () => console.log('User signed in!'),
+      },
+      settings: {
+        enableSavedKeys: true,
+        keysCollection: 'savedKeys',
+      },
+    });
+
+    // Listen to auth state changes
+    AuthKit.onAuthStateChanged((user) => {
+      const userInfo = document.getElementById('user-info');
+      const anchor = document.getElementById('auth-anchor');
+
+      if (user) {
+        anchor.style.display = 'none';
+        userInfo.style.display = 'block';
+
+        document.getElementById('user-name').textContent = user.displayName || 'User';
+        document.getElementById('user-email').textContent = user.email || '';
+
+        const photoEl = document.getElementById('user-photo');
+        if (user.photoURL) {
+          photoEl.src = user.photoURL;
+          photoEl.style.display = 'block';
+        } else {
+          photoEl.style.display = 'none';
+        }
+      } else {
+        userInfo.style.display = 'none';
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "name": "@avengers/authkit",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Drop-in Firebase auth component for static web apps",
+  "main": "index.js",
+  "exports": {
+    ".": "./index.js"
+  },
+  "files": [
+    "core/",
+    "providers/",
+    "ui/",
+    "utils/",
+    "index.js"
+  ],
+  "keywords": [
+    "firebase",
+    "auth",
+    "authentication",
+    "static",
+    "vanilla-js"
+  ],
+  "license": "MIT"
+}

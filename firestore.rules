@@ -1,0 +1,24 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Users collection: only the authenticated user can read/write their own doc
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Saved keys subcollection: only the authenticated user can read/write
+      match /savedKeys/{keyId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+
+      // Support custom collection names via wildcard subcollection
+      match /{subcollection}/{docId} {
+        allow read, write: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Deny all other access by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
