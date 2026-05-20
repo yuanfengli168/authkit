@@ -3,114 +3,465 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AuthKit Demo</title>
+  <title>AuthKit — Firebase Auth UI Demo</title>
   <style>
-    * { box-sizing: border-box; }
+    *, *::before, *::after { box-sizing: border-box; }
+
+    :root {
+      --indigo: #4F46E5;
+      --indigo-dark: #4338CA;
+      --indigo-light: #EEF2FF;
+      --gray-50: #F9FAFB;
+      --gray-100: #F3F4F6;
+      --gray-200: #E5E7EB;
+      --gray-500: #6B7280;
+      --gray-700: #374151;
+      --gray-900: #111827;
+      --green: #10B981;
+      --red: #EF4444;
+      --white: #fff;
+    }
+
     body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #F9FAFB;
-      color: #111827;
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: var(--gray-50);
+      color: var(--gray-900);
       margin: 0;
       padding: 0;
+      line-height: 1.6;
     }
-    .container {
-      max-width: 480px;
-      margin: 80px auto;
-      padding: 0 16px;
-    }
-    h1 {
-      font-size: 28px;
-      font-weight: 700;
-      margin-bottom: 8px;
-    }
-    .subtitle {
-      color: #6B7280;
-      margin-bottom: 32px;
-    }
-    #auth-anchor {
-      margin-bottom: 32px;
-    }
-    #user-info {
-      display: none;
-      background: #fff;
-      border: 1px solid #E5E7EB;
-      border-radius: 12px;
-      padding: 24px;
-    }
-    #user-info h2 { margin-top: 0; }
-    #user-info img {
-      width: 48px;
-      height: 48px;
-      border-radius: 50%;
-      margin-bottom: 8px;
-      display: block;
-    }
-    .sign-out-btn {
-      margin-top: 16px;
-      padding: 8px 16px;
-      background: #EF4444;
+
+    /* ── Hero ── */
+    .hero {
+      background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
       color: #fff;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 14px;
+      text-align: center;
+      padding: 64px 24px 48px;
     }
-    .settings-link {
+    .hero-badge {
       display: inline-block;
-      margin-top: 8px;
-      color: #4F46E5;
-      text-decoration: none;
-      font-size: 14px;
+      background: rgba(255,255,255,0.15);
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 999px;
+      padding: 4px 14px;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 20px;
+      letter-spacing: 0.5px;
     }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      margin: 0 0 14px;
+      letter-spacing: -0.5px;
+    }
+    .hero p {
+      font-size: 1.1rem;
+      opacity: 0.85;
+      max-width: 520px;
+      margin: 0 auto 28px;
+    }
+    .hero-links {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .hero-links a {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: opacity 0.15s;
+    }
+    .hero-links a:hover { opacity: 0.85; }
+    .btn-white {
+      background: #fff;
+      color: var(--indigo);
+    }
+    .btn-outline {
+      background: transparent;
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,0.5);
+    }
+
+    /* ── Features strip ── */
+    .features {
+      display: flex;
+      justify-content: center;
+      gap: 0;
+      background: var(--white);
+      border-bottom: 1px solid var(--gray-200);
+      flex-wrap: wrap;
+    }
+    .feature {
+      padding: 20px 28px;
+      text-align: center;
+      flex: 1 1 160px;
+      border-right: 1px solid var(--gray-200);
+    }
+    .feature:last-child { border-right: none; }
+    .feature-icon { font-size: 22px; margin-bottom: 4px; }
+    .feature-label { font-size: 13px; font-weight: 600; color: var(--gray-700); }
+    .feature-sub { font-size: 12px; color: var(--gray-500); }
+
+    /* ── Main layout ── */
+    .main {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 48px 24px 80px;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      align-items: start;
+    }
+    @media (max-width: 720px) {
+      .main { grid-template-columns: 1fr; }
+    }
+
+    /* ── Auth panel ── */
+    .auth-panel {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+    }
+    .auth-panel-header {
+      background: var(--indigo-light);
+      border-bottom: 1px solid var(--gray-200);
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .auth-panel-header span { font-size: 13px; font-weight: 600; color: var(--indigo); }
+    .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-red { background: #FC6058; }
+    .dot-yellow { background: #FEC02F; }
+    .dot-green { background: #2ACA44; }
+    .auth-panel-dots { display: flex; gap: 5px; margin-right: 8px; }
+    .auth-panel-body { padding: 28px; }
+
+    #auth-anchor { min-height: 80px; }
+
+    /* ── User card (post-login) ── */
+    #user-card {
+      display: none;
+      padding: 28px;
+    }
+    .user-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--gray-100);
+    }
+    #user-photo {
+      width: 56px; height: 56px; border-radius: 50%;
+      object-fit: cover; border: 2px solid var(--gray-200);
+    }
+    .user-avatar-fallback {
+      width: 56px; height: 56px; border-radius: 50%;
+      background: var(--indigo); color: #fff;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; font-weight: 700; flex-shrink: 0;
+    }
+    .user-meta h3 { margin: 0 0 2px; font-size: 16px; font-weight: 700; }
+    .user-meta p { margin: 0; font-size: 13px; color: var(--gray-500); }
+
+    .user-status {
+      display: inline-flex; align-items: center; gap: 5px;
+      background: #ECFDF5; color: var(--green);
+      border-radius: 999px; padding: 3px 10px;
+      font-size: 12px; font-weight: 600; margin-bottom: 18px;
+    }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+
+    /* Key saver demo */
+    .key-demo { margin-bottom: 18px; }
+    .key-demo label { font-size: 13px; font-weight: 600; color: var(--gray-700); display: block; margin-bottom: 6px; }
+    .key-row { display: flex; gap: 8px; }
+    .key-row input {
+      flex: 1; padding: 9px 12px; border: 1px solid var(--gray-200);
+      border-radius: 8px; font-size: 13px; font-family: 'Courier New', monospace;
+      background: var(--gray-50); color: var(--gray-700);
+    }
+    .key-row input:focus { outline: 2px solid var(--indigo); border-color: transparent; }
+    .btn-save {
+      padding: 9px 16px; background: var(--indigo); color: #fff;
+      border: none; border-radius: 8px; font-size: 13px;
+      font-weight: 600; cursor: pointer; white-space: nowrap;
+    }
+    .btn-save:hover { background: var(--indigo-dark); }
+    #save-status { font-size: 12px; color: var(--green); margin-top: 5px; min-height: 16px; }
+
+    .user-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+    .btn-settings {
+      flex: 1; padding: 10px 16px; background: var(--indigo-light); color: var(--indigo);
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 600;
+      cursor: pointer; text-align: center; text-decoration: none;
+      display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+    }
+    .btn-settings:hover { background: #E0E7FF; }
+    .btn-signout {
+      flex: 1; padding: 10px 16px; background: #FEF2F2; color: var(--red);
+      border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-signout:hover { background: #FEE2E2; }
+
+    /* ── Right column ── */
+    .right-col { display: flex; flex-direction: column; gap: 28px; }
+
+    .card {
+      background: var(--white);
+      border: 1px solid var(--gray-200);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .card h3 { margin: 0 0 12px; font-size: 15px; font-weight: 700; }
+    .card p { margin: 0; font-size: 14px; color: var(--gray-500); line-height: 1.6; }
+
+    /* Code block */
+    .code-block {
+      background: #0F172A;
+      border-radius: 10px;
+      padding: 20px;
+      overflow-x: auto;
+    }
+    .code-block pre {
+      margin: 0;
+      font-family: 'Courier New', 'Fira Code', monospace;
+      font-size: 12.5px;
+      line-height: 1.7;
+      color: #E2E8F0;
+    }
+    .tok-kw { color: #93C5FD; }
+    .tok-str { color: #86EFAC; }
+    .tok-fn { color: #FDE68A; }
+    .tok-cm { color: #64748B; }
+    .tok-id { color: #F9A8D4; }
+
+    /* Install pill */
+    .install-pill {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--gray-100); border-radius: 8px; padding: 10px 14px;
+      font-size: 13px; font-family: 'Courier New', monospace; margin-bottom: 14px;
+    }
+    .install-pill span { flex: 1; color: var(--gray-700); }
+
+    /* Steps */
+    .steps { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 10px; }
+    .steps li { display: flex; align-items: flex-start; gap: 10px; font-size: 14px; }
+    .step-num {
+      width: 22px; height: 22px; border-radius: 50%; background: var(--indigo);
+      color: #fff; font-size: 11px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 24px;
+      font-size: 13px;
+      color: var(--gray-500);
+      border-top: 1px solid var(--gray-200);
+    }
+    footer a { color: var(--indigo); text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h1>AuthKit Demo</h1>
-    <p class="subtitle">A drop-in Firebase auth component for static web apps.</p>
 
-    <!-- Replace with your Firebase config -->
-    <!-- <div id="auth-anchor"></div> for inline mode -->
-    <div id="auth-anchor"></div>
-
-    <div id="user-info">
-      <h2>Welcome!</h2>
-      <img id="user-photo" src="" alt="Profile photo" style="display:none" />
-      <p><strong id="user-name"></strong></p>
-      <p id="user-email"></p>
-      <a href="settings.html" class="settings-link">⚙️ Account Settings</a>
-      <br />
-      <button class="sign-out-btn" onclick="AuthKit.signOut()">Sign Out</button>
+  <!-- Hero -->
+  <div class="hero">
+    <div class="hero-badge">🔐 Live Demo</div>
+    <h1>AuthKit</h1>
+    <p>Drop-in Firebase auth UI for static web apps. Google + email sign-in, settings page, saved API keys — one import, no build step.</p>
+    <div class="hero-links">
+      <a class="btn-white" href="https://github.com/yuanfengli168/authkit" target="_blank">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
+        GitHub
+      </a>
+      <a class="btn-outline" href="settings.html">⚙️ Settings Page</a>
     </div>
   </div>
 
+  <!-- Feature strip -->
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">🔑</div>
+      <div class="feature-label">Google OAuth</div>
+      <div class="feature-sub">Popup or redirect</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">✉️</div>
+      <div class="feature-label">Email + Password</div>
+      <div class="feature-sub">Sign up, reset</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🗝️</div>
+      <div class="feature-label">Saved API Keys</div>
+      <div class="feature-sub">Firestore-backed</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">📦</div>
+      <div class="feature-label">No Build Step</div>
+      <div class="feature-sub">Pure ES Modules</div>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">🎨</div>
+      <div class="feature-label">Themeable</div>
+      <div class="feature-sub">Light, dark, auto</div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Left: Auth component -->
+    <div>
+      <h2 style="margin:0 0 16px;font-size:18px;font-weight:700;">Try it live</h2>
+
+      <div class="auth-panel">
+        <div class="auth-panel-header">
+          <div class="auth-panel-dots">
+            <div class="dot dot-red"></div>
+            <div class="dot dot-yellow"></div>
+            <div class="dot dot-green"></div>
+          </div>
+          <span>AuthKit — inline mode</span>
+        </div>
+
+        <!-- Sign-in UI renders here -->
+        <div class="auth-panel-body" id="auth-container">
+          <div id="auth-anchor"></div>
+        </div>
+
+        <!-- Post-login user card -->
+        <div id="user-card">
+          <div class="user-header">
+            <img id="user-photo" src="" alt="" style="display:none" />
+            <div class="user-avatar-fallback" id="user-avatar-fallback"></div>
+            <div class="user-meta">
+              <h3 id="user-name">User</h3>
+              <p id="user-email"></p>
+            </div>
+          </div>
+
+          <div class="user-status">
+            <div class="status-dot"></div>
+            Signed in with Firebase ✓
+          </div>
+
+          <div class="key-demo">
+            <label>💾 Test: save an API key to Firestore</label>
+            <div class="key-row">
+              <input type="text" id="key-input" placeholder="sk-test-1234abcd…" />
+              <button class="btn-save" onclick="saveTestKey()">Save</button>
+            </div>
+            <div id="save-status"></div>
+          </div>
+
+          <div class="user-actions">
+            <a href="settings.html" class="btn-settings">⚙️ Account Settings</a>
+            <button class="btn-signout" onclick="window.AuthKit && window.AuthKit.signOut()">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right: info cards -->
+    <div class="right-col">
+
+      <div class="card">
+        <h3>⚡ Quick start</h3>
+        <div class="install-pill">
+          <span>import AuthKit from 'https://yuanfengli168.github.io/authkit/index.js'</span>
+        </div>
+        <div class="code-block">
+          <pre><span class="tok-kw">import</span> AuthKit <span class="tok-kw">from</span> <span class="tok-str">'./authkit/index.js'</span>;
+
+<span class="tok-kw">await</span> AuthKit.<span class="tok-fn">init</span>({
+  firebase: firebaseConfig,
+  enabledProviders: [<span class="tok-str">'google'</span>, <span class="tok-str">'email'</span>],
+  anchor: <span class="tok-str">'#auth-anchor'</span>,
+  loginMode: <span class="tok-str">'inline'</span>,   <span class="tok-cm">// or 'modal'</span>
+  theme: <span class="tok-str">'auto'</span>,
+  brandName: <span class="tok-str">'My App'</span>,
+  settings: {
+    enableSavedKeys: <span class="tok-kw">true</span>,
+  },
+});
+
+AuthKit.<span class="tok-fn">onAuthStateChanged</span>((<span class="tok-id">user</span>) => {
+  <span class="tok-kw">if</span> (user) console.<span class="tok-fn">log</span>(<span class="tok-str">'Signed in:'</span>, user.email);
+});</pre>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>🚀 How to use</h3>
+        <ul class="steps">
+          <li><div class="step-num">1</div><span>Clone or copy the <code>authkit/</code> folder into your project</span></li>
+          <li><div class="step-num">2</div><span>Add your Firebase config and call <code>AuthKit.init()</code></span></li>
+          <li><div class="step-num">3</div><span>Drop <code>&lt;div id="auth-anchor"&gt;&lt;/div&gt;</code> anywhere on the page</span></li>
+          <li><div class="step-num">4</div><span>Enable Google auth & Email/Password in Firebase Console</span></li>
+          <li><div class="step-num">5</div><span>Deploy your <code>firestore.rules</code> — done!</span></li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>📋 What's included</h3>
+        <p>
+          <strong>Core:</strong> session manager, pub/sub state machine, provider registry, Firestore wrapper.<br><br>
+          <strong>Providers:</strong> Google OAuth (popup/redirect, link/unlink) · Email/password (sign in, sign up, reset).<br><br>
+          <strong>UI:</strong> Modal & inline variants · Settings page (profile, connected accounts, saved keys, danger zone) · Full ARIA + focus trap.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+  <footer>
+    Built with ❤️ using Firebase ·
+    <a href="https://github.com/yuanfengli168/authkit" target="_blank">View on GitHub</a> ·
+    <a href="settings.html">Settings demo</a>
+  </footer>
+
   <script type="module">
     import AuthKit from '../index.js';
+    window.AuthKit = AuthKit;
 
-    // Replace firebaseConfig with your own project config
     const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
+      apiKey: 'AIzaSy…vLFQ',
+      authDomain: 'ai-idea-generator-d9e15.firebaseapp.com',
+      projectId: 'ai-idea-generator-d9e15',
+      storageBucket: 'ai-idea-generator-d9e15.firebasestorage.app',
+      messagingSenderId: '997919258193',
+      appId: '1:997919258193:web:8c1ad1f323a82b683faa70'
     };
 
     await AuthKit.init({
       firebase: firebaseConfig,
       enabledProviders: ['google', 'email'],
       anchor: '#auth-anchor',
-      loginMode: 'inline',    // 'inline' or 'modal'
-      theme: 'auto',          // 'light', 'dark', or 'auto'
-      brandName: 'My App',
-      brandEmoji: '🚀',
-      loginTitle: 'Welcome to My App',
-      loginSubtitle: 'Sign in to continue',
-      googleAuthMode: 'popup', // 'popup' or 'redirect'
-      baseUrl: '../',         // base URL for loading providers
+      loginMode: 'inline',
+      theme: 'auto',
+      brandName: 'AuthKit Demo',
+      brandEmoji: '🔐',
+      loginTitle: 'Try AuthKit',
+      loginSubtitle: 'Sign in with Google or email to see it in action',
+      googleAuthMode: 'popup',
+      baseUrl: '../',
       callbacks: {
-        afterLogin: () => console.log('User signed in!'),
+        afterLogin: () => console.log('[AuthKit] User signed in'),
       },
       settings: {
         enableSavedKeys: true,
@@ -118,29 +469,53 @@
       },
     });
 
-    // Listen to auth state changes
     AuthKit.onAuthStateChanged((user) => {
-      const userInfo = document.getElementById('user-info');
-      const anchor = document.getElementById('auth-anchor');
+      const authContainer = document.getElementById('auth-container');
+      const authAnchor    = document.getElementById('auth-anchor');
+      const userCard      = document.getElementById('user-card');
 
       if (user) {
-        anchor.style.display = 'none';
-        userInfo.style.display = 'block';
+        authAnchor.style.display = 'none';
+        userCard.style.display = 'block';
 
-        document.getElementById('user-name').textContent = user.displayName || 'User';
+        document.getElementById('user-name').textContent  = user.displayName || 'User';
         document.getElementById('user-email').textContent = user.email || '';
 
-        const photoEl = document.getElementById('user-photo');
+        const photoEl    = document.getElementById('user-photo');
+        const avatarEl   = document.getElementById('user-avatar-fallback');
+        const initial    = (user.displayName || user.email || 'U')[0].toUpperCase();
+        avatarEl.textContent = initial;
+
         if (user.photoURL) {
           photoEl.src = user.photoURL;
           photoEl.style.display = 'block';
+          avatarEl.style.display = 'none';
         } else {
           photoEl.style.display = 'none';
+          avatarEl.style.display = 'flex';
         }
       } else {
-        userInfo.style.display = 'none';
+        authAnchor.style.display = '';
+        userCard.style.display = 'none';
       }
     });
+
+    window.saveTestKey = async () => {
+      const input  = document.getElementById('key-input');
+      const status = document.getElementById('save-status');
+      const val    = input.value.trim();
+      if (!val) { status.textContent = '⚠️ Enter a key first'; status.style.color = '#F59E0B'; return; }
+
+      status.textContent = 'Saving…'; status.style.color = '#6B7280';
+      try {
+        await AuthKit.saveKey({ label: 'test-key', value: val });
+        status.textContent = '✅ Saved to Firestore!'; status.style.color = '#10B981';
+        input.value = '';
+      } catch (e) {
+        status.textContent = '❌ ' + (e.message || 'Error saving key'); status.style.color = '#EF4444';
+      }
+    };
   </script>
+
 </body>
 </html>
