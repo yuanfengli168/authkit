@@ -81,16 +81,18 @@ export async function render(container, config, auth, app) {
 
   const state = getState();
   if (state.status !== 'authenticated' || !state.user) {
+    // If state is already settled (unauthenticated), redirect immediately.
+    // Only show loading + subscribe if auth is still in-flight (loading).
+    if (state.status === 'unauthenticated') {
+      const loginPage = config.redirects?.loginPage ?? '/login.html';
+      const redirect  = encodeURIComponent(location.href);
+      location.href = `${loginPage}?redirect=${redirect}`;
+      return;
+    }
     container.append(ce('p', { className: 'ak-settings-loading' }, 'Loading…'));
-    // Always wait for a real Firebase dispatch — never act on the cold initial state
-    let hasDispatched = false;
+    // subscribe() immediately invokes the callback with current state, then
+    // again on every future dispatch — handle all states inline, no skip logic.
     const unsub = subscribe(async (s) => {
-      if (!hasDispatched) {
-        hasDispatched = true;
-        // Skip the first synchronous call (cold initial state)
-        // Only act on subsequent dispatches from Firebase
-        return;
-      }
       if (s.status === 'authenticated' && s.user) {
         unsub();
         await render(container, config, auth, app);
@@ -100,6 +102,7 @@ export async function render(container, config, auth, app) {
         const redirect  = encodeURIComponent(location.href);
         location.href = `${loginPage}?redirect=${redirect}`;
       }
+      // status === 'loading' or 'error': stay on loading screen and wait
     });
     return;
   }
