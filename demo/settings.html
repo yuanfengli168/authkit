@@ -46,7 +46,37 @@
 
   <!-- Hidden anchor for AuthKit modal init (keeps #settings-container clean) -->
   <div id="ak-anchor" style="display:none"></div>
-  <div id="settings-container"></div>
+  <div id="settings-container">
+    <div id="settings-loading" style="text-align:center;padding:48px 16px;color:#6B7280;font-size:14px;">
+      Loading…
+    </div>
+  </div>
+
+  <style>
+    .settings-auth-warning {
+      max-width: 480px;
+      margin: 48px auto;
+      background: #FFF;
+      border: 1px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 32px 28px;
+      text-align: center;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.04);
+    }
+    .settings-auth-warning .icon { font-size: 40px; margin-bottom: 12px; }
+    .settings-auth-warning h2 {
+      margin: 0 0 8px; font-size: 18px; font-weight: 700; color: #111827;
+    }
+    .settings-auth-warning p {
+      margin: 0 0 20px; font-size: 14px; color: #6B7280; line-height: 1.5;
+    }
+    .settings-auth-warning a.btn {
+      display: inline-block; background: #4F46E5; color: #fff;
+      text-decoration: none; padding: 10px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; transition: background 0.15s;
+    }
+    .settings-auth-warning a.btn:hover { background: #4338CA; }
+  </style>
 
   <script type="module">
     import AuthKit from '../index.js';
@@ -80,8 +110,39 @@
       },
     });
 
-    // renderSettings awaits auth state internally before rendering
-    await AuthKit.renderSettings('#settings-container');
+    const container = document.getElementById('settings-container');
+
+    function showAuthWarning() {
+      container.innerHTML = `
+        <div class="settings-auth-warning">
+          <div class="icon">🔒</div>
+          <h2>Please sign in first</h2>
+          <p>You need to be signed in on the demo to view your account settings. Head back to the demo, sign in with Google or email, then try again.</p>
+          <a class="btn" href="index.html">← Go to demo &amp; sign in</a>
+        </div>
+      `;
+    }
+
+    // Wait for auth state to settle, then either render settings or show a warning
+    // (instead of letting renderSettings auto-redirect, which causes the brief flash).
+    // NOTE: subscribe() invokes the callback synchronously with the current state,
+    // so `unsub` must be declared with `let` *before* the subscribe call to avoid a
+    // TDZ ReferenceError when the first state is already 'authenticated'.
+    let handled = false;
+    let unsub = () => {};
+    unsub = AuthKit.subscribe(async (state) => {
+      if (handled) return;
+      if (state.status === 'authenticated' && state.user) {
+        handled = true;
+        unsub();
+        await AuthKit.renderSettings('#settings-container');
+      } else if (state.status === 'unauthenticated') {
+        handled = true;
+        unsub();
+        showAuthWarning();
+      }
+      // 'loading' / 'error' → keep the loading placeholder and wait
+    });
   </script>
 </body>
 </html>
