@@ -127,6 +127,16 @@ export const AuthKit = {
     // Apply theme to anchor
     applyTheme(anchor, _config.ui?.theme ?? 'auto');
 
+    // Enter 'loading' BEFORE wiring Firebase so the first
+    // onAuthStateChanged callback (which fires asynchronously after
+    // initSession resolves) is the last word on auth status. Dispatching
+    // INIT *after* initSession would clobber an already-settled
+    // 'unauthenticated'/'authenticated' state back to 'loading' and leave
+    // the state machine stuck (the listener won't fire again until the
+    // user actually changes), causing pages like settings.html to hang on
+    // the "Loading…" placeholder forever.
+    dispatch({ type: 'INIT' });
+
     // Init Firebase session
     await initSession(_config.firebase, {
       afterLogin:  _config.redirects?.afterLogin,
@@ -135,7 +145,6 @@ export const AuthKit = {
     }, _config.googleAuthMode);
 
     // Load all providers
-    dispatch({ type: 'INIT' });
     _providers = await loadAll(_config.enabledProviders, _baseUrl);
 
     const auth          = getAuth_();
