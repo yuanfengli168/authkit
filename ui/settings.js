@@ -2,6 +2,7 @@
 
 import { ce, injectStyles } from '../utils/dom.js';
 import { getState, subscribe } from '../core/state.js';
+import { ensureBaseCSS } from '../core/base-css.js';
 import { getFirestoreClient } from '../core/firestore.js';
 import { renderAccountSection }    from './components/account-section.js';
 import { renderConnectedSection }  from './components/connected-section.js';
@@ -75,6 +76,7 @@ const SETTINGS_CSS = `
 `;
 
 export async function render(container, config, auth, app) {
+  ensureBaseCSS();
   injectStyles('settings', SETTINGS_CSS);
   container.setAttribute('data-authkit', '');
   container.innerHTML = '';
@@ -140,9 +142,14 @@ export async function render(container, config, auth, app) {
   container.append(wrapper);
 
   // Redirect if user logs out while on this page
-  subscribe((s) => {
+  // Bug 11 fix: unsubscribe after redirect to prevent memory leak
+  const logoutUnsub = subscribe((s) => {
     if (s.status === 'unauthenticated') {
+      logoutUnsub();
       location.href = config.redirects?.afterLogout ?? '/';
     }
   });
+
+  // Return cleanup function so callers can unsubscribe without redirecting
+  return () => { logoutUnsub(); };
 }

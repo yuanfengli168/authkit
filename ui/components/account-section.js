@@ -41,6 +41,12 @@ export function renderAccountSection(user, auth) {
     saveBtn.textContent = 'Saving…';
     feedbackEl.classList.add('ak-hidden');
     try {
+      // Bug 17 fix: guard against null currentUser
+      if (!auth.currentUser) {
+        feedbackEl.textContent = '❌ You are no longer signed in. Please refresh and try again.';
+        feedbackEl.classList.remove('ak-hidden');
+        return;
+      }
       const { updateProfile } = await import(`${FB_SDK}/firebase-auth.js`);
       await updateProfile(auth.currentUser, {
         displayName: nameInput.value.trim() || null,

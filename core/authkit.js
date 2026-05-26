@@ -6,59 +6,7 @@ import { loadAll, registerProvider as _registerProvider, listLoaded } from './re
 import { applyTheme }  from '../utils/theme.js';
 import { injectStyles } from '../utils/dom.js';
 import { setPostLoginRedirect, getPostLoginRedirect } from '../utils/redirect.js';
-
-// ── Base CSS (injected once) ──────────────────────────────────────────────────
-const BASE_CSS = `
-[data-authkit] {
-  --ak-color-primary: #4F46E5;
-  --ak-color-primary-hover: #4338CA;
-  --ak-color-primary-text: #FFFFFF;
-  --ak-color-bg: #FFFFFF;
-  --ak-color-bg-subtle: #F9FAFB;
-  --ak-color-surface: #FFFFFF;
-  --ak-color-border: #E5E7EB;
-  --ak-color-text: #111827;
-  --ak-color-text-secondary: #6B7280;
-  --ak-color-error: #DC2626;
-  --ak-color-error-bg: #FEF2F2;
-  --ak-color-success: #16A34A;
-  --ak-overlay-bg: rgba(0,0,0,0.5);
-  --ak-font-family: system-ui,-apple-system,'Segoe UI',sans-serif;
-  --ak-font-size-base: 16px;
-  --ak-font-size-sm: 14px;
-  --ak-font-size-lg: 18px;
-  --ak-spacing-xs: 4px;
-  --ak-spacing-sm: 8px;
-  --ak-spacing-md: 16px;
-  --ak-spacing-lg: 24px;
-  --ak-spacing-xl: 32px;
-  --ak-radius-sm: 4px;
-  --ak-radius-md: 8px;
-  --ak-radius-lg: 12px;
-  --ak-radius-full: 9999px;
-  --ak-modal-width: 400px;
-  --ak-modal-shadow: 0 20px 60px rgba(0,0,0,0.15);
-  --ak-btn-height: 44px;
-  --ak-btn-font-weight: 500;
-  --ak-btn-radius: var(--ak-radius-md);
-  --ak-z-overlay: 1000;
-  --ak-z-modal: 1001;
-  box-sizing: border-box;
-  font-family: var(--ak-font-family);
-  font-size: var(--ak-font-size-base);
-}
-[data-authkit] *, [data-authkit] *::before, [data-authkit] *::after { box-sizing: inherit; }
-[data-authkit][data-theme="dark"] {
-  --ak-color-bg: #1F2937;
-  --ak-color-bg-subtle: #111827;
-  --ak-color-surface: #374151;
-  --ak-color-border: #4B5563;
-  --ak-color-text: #F9FAFB;
-  --ak-color-text-secondary: #9CA3AF;
-  --ak-overlay-bg: rgba(0,0,0,0.7);
-}
-[data-authkit] .ak-hidden { display: none !important; }
-`;
+import { ensureBaseCSS } from './base-css.js';
 
 // ── Config defaults ───────────────────────────────────────────────────────────
 const DEFAULTS = {
@@ -100,11 +48,19 @@ let _modal      = null;
 let _inline     = null;
 let _providers  = [];
 let _baseUrl    = '.';
+let _initialized = false;  // Bug 6 fix: guard against double init()
 
 // ── AuthKit singleton ─────────────────────────────────────────────────────────
 export const AuthKit = {
 
   async init(userConfig) {
+    // Bug 6 fix: guard against double init()
+    if (_initialized) {
+      console.warn('[AuthKit] Already initialized. Call AuthKit.destroy() first if you need to reinitialize.');
+      return AuthKit;
+    }
+    _initialized = true;
+
     // Validate required fields
     if (!userConfig?.firebase) throw new Error('[AuthKit] config.firebase is required.');
     if (!userConfig?.anchor)   throw new Error('[AuthKit] config.anchor is required (CSS selector or element).');
@@ -115,7 +71,7 @@ export const AuthKit = {
     _baseUrl = userConfig.baseUrl ?? _inferBaseUrl();
 
     // Inject base styles
-    injectStyles('base', BASE_CSS);
+    ensureBaseCSS();
 
     // Find anchor element
     const anchor = typeof _config.anchor === 'string'
@@ -156,11 +112,8 @@ export const AuthKit = {
       _inline = createInline(anchor, _config);
       _inline.update(_providers, auth);
 
-      // Show/hide inline based on auth state
-      subscribe((state) => {
-        if (state.status === 'authenticated') _inline.hide();
-        else _inline.show();
-      });
+      // Bug 12 fix: removed duplicate subscription here — createInline already
+      // subscribes to auth state internally for show/hide behavior.
     } else {
       // Modal — lazy, created on first showLogin()
       const { createModal } = await import('../ui/modal.js');
@@ -170,7 +123,9 @@ export const AuthKit = {
       if (_config.autoShowLogin) {
         subscribe((state) => {
           if (state.status === 'unauthenticated') {
-            _modal.show(_providers, auth, emailProvider);
+            // Bug 1 fix: call update() before show() to ensure providers/auth are set
+            _modal.update(_providers, getAuth_());
+            _modal.show();
           }
         });
       }
@@ -187,10 +142,11 @@ export const AuthKit = {
   },
 
   onAuthStateChanged(cb) {
-    let prev = null;
+    // Bug 7 fix: use undefined sentinel so initial unauthenticated state fires callback
+    let prev = undefined;
     return subscribe((state) => {
       const current = state.user ?? null;
-      if (current !== prev) {
+      if (current !== prev || prev === undefined) {
         prev = current;
         cb(current);
       }
@@ -198,17 +154,29 @@ export const AuthKit = {
   },
 
   async signOut() {
+    // Bug 8 fix: guard against calling before init()
+    if (!getAuth_()) throw new Error('[AuthKit] Call init() first.');
     const { signOut } = await import(`https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js`);
-    dispatch({ type: 'SIGN_OUT' });
-    await signOut(getAuth_());
+    // Bug 4 fix: dispatch SIGN_OUT after signOut succeeds, or recover on failure
+    try {
+      await signOut(getAuth_());
+    } catch (e) {
+      // Recover from loading state if sign-out fails
+      dispatch({ type: 'CLEAR_ERROR' });
+      throw e;
+    }
   },
 
   showLogin() {
+    // Bug 8 fix: guard against calling before init()
+    if (!_config) throw new Error('[AuthKit] Call init() first.');
     if (_inline) { _inline.show(); return; }
     if (_modal) {
       const auth          = getAuth_();
       const emailProvider = _providers.find(p => p.id === 'email');
-      _modal.show(_providers, auth, emailProvider);
+      // Bug 1 fix: call update() before show() to ensure providers/auth are set
+      _modal.update(_providers, auth);
+      _modal.show();
     }
   },
 
@@ -222,19 +190,27 @@ export const AuthKit = {
     if (state.status === 'authenticated') return true;
 
     const loginPage = opts.loginPage ?? _config?.redirects?.loginPage ?? '/login.html';
+    // Bug 5 fix: prevent infinite redirect loop if already on the login page
+    try {
+      const loginPath = new URL(loginPage, location.origin).pathname;
+      if (location.pathname === loginPath) return false;
+    } catch { /* if loginPage is not a valid URL, skip the check */ }
+
     setPostLoginRedirect(location.href);
     location.href = `${loginPage}?redirect=${encodeURIComponent(location.href)}`;
     return false;
   },
 
   async renderSettings(selector) {
+    // Bug 8 fix: guard against calling before init()
+    if (!_config) throw new Error('[AuthKit] Call init() first.');
     const container = typeof selector === 'string'
       ? document.querySelector(selector)
       : selector;
     if (!container) throw new Error(`[AuthKit] renderSettings: element not found: "${selector}"`);
 
     const { render } = await import('../ui/settings.js');
-    await render(container, _config, getAuth_(), getApp_());
+    return await render(container, _config, getAuth_(), getApp_());
   },
 
   async saveKey({ name, label, value }) {

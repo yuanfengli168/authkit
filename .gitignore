@@ -1,0 +1,20 @@
+# Dependencies
+node_modules/
+
+# Build artifacts
+package-lock.json
+
+# Test coverage
+coverage/
+
+# Editor / OS
+.DS_Store
+.vscode/
+*.swp
+*.swo
+*~
+
+# Environment
+.env
+.env.local
+.env.*.local

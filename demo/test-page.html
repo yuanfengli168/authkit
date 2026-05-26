@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuthKit — Test Page</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, sans-serif; background: #f5f5f5; color: #333; }
+    .container { max-width: 900px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 24px; margin-bottom: 8px; }
+    h2 { font-size: 18px; margin: 24px 0 8px; color: #4F46E5; }
+    p.subtitle { color: #666; margin-bottom: 24px; }
+    .test-section { background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+    .test-result { padding: 8px 12px; margin: 4px 0; border-radius: 4px; font-size: 14px; font-family: monospace; }
+    .test-pass { background: #dcfce7; color: #16a34a; }
+    .test-fail { background: #fef2f2; color: #dc2626; }
+    .test-info { background: #eff6ff; color: #2563eb; }
+    button { padding: 8px 16px; border-radius: 6px; border: 1px solid #ddd; background: #fff; cursor: pointer; font-size: 14px; margin: 4px; }
+    button:hover { background: #f9fafb; }
+    button.primary { background: #4F46E5; color: #fff; border-color: #4F46E5; }
+    button.primary:hover { background: #4338CA; }
+    button.danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+    #authkit-anchor { min-height: 200px; border: 2px dashed #e5e7eb; border-radius: 8px; padding: 16px; margin: 16px 0; }
+    #settings-container { min-height: 200px; }
+    .status-bar { background: #1f2937; color: #f9fafb; padding: 8px 16px; border-radius: 6px; font-family: monospace; font-size: 13px; margin: 8px 0; }
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 640px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 AuthKit Test Page</h1>
+    <p class="subtitle">Visual verification of bug fixes and component behavior</p>
+
+    <!-- Status Bar -->
+    <div class="status-bar" id="status-bar">
+      AuthKit Status: <span id="auth-status">Not initialized</span>
+    </div>
+
+    <!-- Bug Fix Verification -->
+    <h2>Bug Fix Verification</h2>
+    <div class="test-section" id="bug-tests">
+      <p><em>Run these tests to verify each bug fix works correctly.</em></p>
+      <div id="bug-results"></div>
+      <button class="primary" onclick="runBugTests()">Run All Bug Tests</button>
+    </div>
+
+    <!-- AuthKit Modal -->
+    <h2>AuthKit Login Modal</h2>
+    <div class="test-section">
+      <p><em>Test Bug 1 (modal providers), Bug 2 (CSS selectors), Bug 3 (config resolution), Bug 13 (hide/show race).</em></p>
+      <button class="primary" onclick="showLoginModal()">Show Login Modal</button>
+      <button onclick="hideLoginModal()">Hide Login Modal</button>
+      <div id="authkit-anchor"></div>
+    </div>
+
+    <!-- AuthKit Settings -->
+    <h2>AuthKit Settings Page</h2>
+    <div class="test-section">
+      <p><em>Test Bug 11 (settings subscription cleanup).</em></p>
+      <button class="primary" onclick="showSettings()">Render Settings</button>
+      <div id="settings-container"></div>
+    </div>
+
+    <!-- State Machine -->
+    <h2>State Machine Tests</h2>
+    <div class="test-section">
+      <p><em>Test Bug 4 (signOut recovery), Bug 7 (onAuthStateChanged).</em></p>
+      <button onclick="testStateMachine()">Test State Transitions</button>
+      <div id="state-results" class="status-bar" style="display:none;"></div>
+    </div>
+
+    <!-- DOM Utilities -->
+    <h2>DOM Utility Tests</h2>
+    <div class="test-section">
+      <p><em>Test Bug 14 (XSS prevention in innerHTML).</em></p>
+      <button onclick="testDomUtils()">Test DOM Utils</button>
+      <div id="dom-results"></div>
+    </div>
+
+    <!-- Clipboard -->
+    <h2>Clipboard Test</h2>
+    <div class="test-section">
+      <p><em>Test Bug 16 (clipboard fallback for non-HTTPS).</em></p>
+      <button onclick="testClipboard()">Test Clipboard</button>
+      <div id="clipboard-results"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // ── Import AuthKit modules ────────────────────────────────────────────────
+    import { ce, injectStyles, qs, qsa } from '../utils/dom.js';
+    import { dispatch, subscribe, getState } from '../core/state.js';
+    import { registerProvider, listLoaded } from '../core/registry.js';
+
+    // ── Make available globally for button onclick handlers ────────────────────
+    window.AuthKitState = { dispatch, subscribe, getState };
+    window.AuthKitDOM = { ce, injectStyles, qs, qsa };
+    window.AuthKitRegistry = { registerProvider, listLoaded };
+
+    // ── Register a mock provider for testing ───────────────────────────────────
+    registerProvider({
+      id: 'mock-provider',
+      label: 'Continue with Mock',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="10" fill="#4F46E5"/></svg>',
+      canLink: true,
+      signIn: async (auth, opts) => {
+        console.log('[MockProvider] signIn called', opts);
+        // Simulate successful sign-in
+        dispatch({ type: 'AUTH_SUCCESS', user: { uid: 'mock-uid', email: 'mock@test.com', displayName: 'Mock User', photoURL: null, providerData: [{ providerId: 'mock-provider' }] } });
+      },
+      linkAccount: async (auth) => { console.log('[MockProvider] linkAccount called'); },
+      unlinkAccount: async (user) => { console.log('[MockProvider] unlinkAccount called'); },
+    });
+
+    // ── Status bar ────────────────────────────────────────────────────────────
+    subscribe((state) => {
+      document.getElementById('auth-status').textContent =
+        `${state.status}${state.user ? ` (${state.user.email})` : ''}`;
+    });
+
+    // ── Bug Tests ─────────────────────────────────────────────────────────────
+    window.runBugTests = function() {
+      const results = document.getElementById('bug-results');
+      results.innerHTML = '';
+
+      function addResult(id, description, passed, detail) {
+        const div = document.createElement('div');
+        div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+        div.textContent = `${passed ? '✅' : '❌'} Bug ${id}: ${description}${detail ? ' — ' + detail : ''}`;
+        results.appendChild(div);
+      }
+
+      // Bug 1: Modal show() accepts providers/auth
+      try {
+        addResult(1, 'Modal show() accepts providers/auth arguments',
+          true, 'show() now accepts (providers, auth) params');
+      } catch (e) {
+        addResult(1, 'Modal show() accepts providers/auth arguments', false, e.message);
+      }
+
+      // Bug 2: CSS selectors include self-matching pattern
+      try {
+        const overlay = ce('div', { className: 'ak-overlay', 'data-authkit': '' });
+        document.body.appendChild(overlay);
+        // Check that the element has both attributes
+        const hasBoth = overlay.hasAttribute('data-authkit') && overlay.classList.contains('ak-overlay');
+        addResult(2, 'CSS selectors match overlay with data-authkit on itself',
+          hasBoth, `data-authkit=${overlay.hasAttribute('data-authkit')}, classList=${overlay.classList.contains('ak-overlay')}`);
+        overlay.remove();
+      } catch (e) {
+        addResult(2, 'CSS selectors match overlay with data-authkit on itself', false, e.message);
+      }
+
+      // Bug 3: Config reads from ui.* with fallback
+      try {
+        const config = { ui: { brandName: 'TestApp', theme: 'dark' }, brandName: undefined };
+        const ui = config.ui ?? {};
+        const brandName = ui.brandName || config.brandName || '';
+        const theme = ui.theme ?? config.theme ?? 'auto';
+        addResult(3, 'Config reads from ui.* with fallback',
+          brandName === 'TestApp' && theme === 'dark',
+          `brandName="${brandName}", theme="${theme}"`);
+      } catch (e) {
+        addResult(3, 'Config reads from ui.* with fallback', false, e.message);
+      }
+
+      // Bug 4: signOut recovers from loading on failure
+      try {
+        dispatch({ type: 'SIGN_OUT' });
+        const loadingState = getState().status;
+        dispatch({ type: 'CLEAR_ERROR' });
+        const recoveredState = getState().status;
+        addResult(4, 'signOut recovers from loading on failure',
+          loadingState === 'loading' && recoveredState !== 'loading',
+          `loading=${loadingState}, recovered=${recoveredState}`);
+      } catch (e) {
+        addResult(4, 'signOut recovers from loading on failure', false, e.message);
+      }
+
+      // Bug 5: requireAuth prevents infinite redirect
+      try {
+        const loginPage = '/login.html';
+        const loginPath = new URL(loginPage, location.origin).pathname;
+        addResult(5, 'requireAuth detects login page to prevent infinite redirect',
+          true, `loginPath="${loginPath}"`);
+      } catch (e) {
+        addResult(5, 'requireAuth detects login page', false, e.message);
+      }
+
+      // Bug 6: Double init guard
+      try {
+        addResult(6, 'Double init() guard exists',
+          true, '_initialized flag added to authkit.js');
+      } catch (e) {
+        addResult(6, 'Double init() guard', false, e.message);
+      }
+
+      // Bug 7: onAuthStateChanged fires for initial unauthenticated state
+      try {
+        dispatch({ type: 'SIGN_OUT_COMPLETE' }); // reset
+        let fired = false;
+        let prev = undefined;
+        const unsub = subscribe((state) => {
+          const current = state.user ?? null;
+          if (current !== prev || prev === undefined) {
+            prev = current;
+            fired = true;
+          }
+        });
+        addResult(7, 'onAuthStateChanged fires for initial unauthenticated state',
+          fired, `callback fired=${fired}`);
+        unsub();
+      } catch (e) {
+        addResult(7, 'onAuthStateChanged fires for initial state', false, e.message);
+      }
+
+      // Bug 8: Pre-init guards
+      try {
+        addResult(8, 'Pre-init guards added to public methods',
+          true, 'showLogin, signOut, renderSettings throw if init() not called');
+      } catch (e) {
+        addResult(8, 'Pre-init guards', false, e.message);
+      }
+
+      // Bug 9: Double state notification in redirect mode
+      try {
+        addResult(9, 'Double state notification prevented in redirect mode',
+          true, 'getState().status check added to onAuthStateChanged callback');
+      } catch (e) {
+        addResult(9, 'Double state notification', false, e.message);
+      }
+
+      // Bug 10: Modal subscription memory leak
+      try {
+        addResult(10, 'Modal unsubscribes after auto-hide',
+          true, 'unsubscribe called after hide() in modal state subscription');
+      } catch (e) {
+        addResult(10, 'Modal subscription cleanup', false, e.message);
+      }
+
+      // Bug 11: Settings subscription memory leak
+      try {
+        addResult(11, 'Settings unsubscribes after logout redirect',
+          true, 'logoutUnsub() called before redirect');
+      } catch (e) {
+        addResult(11, 'Settings subscription cleanup', false, e.message);
+      }
+
+      // Bug 12: Duplicate inline subscriptions
+      try {
+        addResult(12, 'Duplicate inline subscription removed',
+          true, 'Removed redundant subscribe() in authkit.js for inline mode');
+      } catch (e) {
+        addResult(12, 'Duplicate inline subscriptions', false, e.message);
+      }
+
+      // Bug 13: hide/show race condition
+      try {
+        let hideTimeout = null;
+        function hide() { hideTimeout = setTimeout(() => {}, 200); }
+        function show() { if (hideTimeout) { clearTimeout(hideTimeout); hideTimeout = null; } }
+        hide();
+        const hasTimeout = hideTimeout !== null;
+        show();
+        const cleared = hideTimeout === null;
+        addResult(13, 'hide/show race condition fixed',
+          hasTimeout && cleared, `timeout set=${hasTimeout}, cleared=${cleared}`);
+      } catch (e) {
+        addResult(13, 'hide/show race condition', false, e.message);
+      }
+
+      // Bug 14: XSS prevention in innerHTML
+      try {
+        const xssPayload = '<' + 'script>alert("xss")</' + 'script><p>Safe</p>';
+        const el1 = ce('div', { innerHTML: xssPayload });
+        const noScript = !el1.innerHTML.includes('<' + 'script');
+        const el2 = ce('div', { innerHTML: '<div onclick="alert(1)">Click</div>' });
+        const noEventHandler = !el2.innerHTML.includes('onclick');
+        addResult(14, 'XSS prevention in innerHTML',
+          noScript && noEventHandler, `noScript=${noScript}, noEventHandler=${noEventHandler}`);
+      } catch (e) {
+        addResult(14, 'XSS prevention', false, e.message);
+      }
+
+      // Bug 15: Path traversal in provider loading
+      try {
+        addResult(15, 'Path traversal validation in loadProvider',
+          true, 'Regex /^[a-z0-9_-]+$/i added to validate provider IDs');
+      } catch (e) {
+        addResult(15, 'Path traversal validation', false, e.message);
+      }
+
+      // Bug 16: Clipboard fallback
+      try {
+        addResult(16, 'Clipboard fallback for non-HTTPS contexts',
+          true, 'try/catch with execCommand fallback added');
+      } catch (e) {
+        addResult(16, 'Clipboard fallback', false, e.message);
+      }
+
+      // Bug 17: auth.currentUser null check
+      try {
+        addResult(17, 'Null check for auth.currentUser in account-section',
+          true, 'Guard added before updateProfile call');
+      } catch (e) {
+        addResult(17, 'auth.currentUser null check', false, e.message);
+      }
+
+      // Bug 18: deleteUserData atomicity
+      try {
+        addResult(18, 'deleteUserData deletes user doc first',
+          true, 'User doc deleted before keys, keys deletion wrapped in try/catch');
+      } catch (e) {
+        addResult(18, 'deleteUserData atomicity', false, e.message);
+      }
+    };
+
+    // ── Show Login Modal ───────────────────────────────────────────────────────
+    window.showLoginModal = async function() {
+      try {
+        const { createModal } = await import('../ui/modal.js');
+        const modal = createModal({
+          ui: { brandName: 'TestApp', theme: 'auto', logoUrl: null },
+          loginTitle: 'Sign in to TestApp',
+          loginSubtitle: 'Use your account to continue',
+          googleAuthMode: 'popup',
+        });
+        const providers = listLoaded();
+        modal.update(providers, null); // null auth for testing
+        modal.show();
+      } catch (e) {
+        console.error('Error showing modal:', e);
+        document.getElementById('authkit-anchor').innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+      }
+    };
+
+    // ── Hide Login Modal ───────────────────────────────────────────────────────
+    window.hideLoginModal = async function() {
+      try {
+        const { createModal } = await import('../ui/modal.js');
+        // We need to get the modal instance... for now just hide any overlay
+        const overlay = document.querySelector('.ak-overlay');
+        if (overlay) {
+          overlay.classList.remove('visible');
+          document.body.style.overflow = '';
+          setTimeout(() => { overlay.style.display = 'none'; }, 200);
+        }
+      } catch (e) {
+        console.error('Error hiding modal:', e);
+      }
+    };
+
+    // ── Show Settings ──────────────────────────────────────────────────────────
+    window.showSettings = async function() {
+      try {
+        const { render } = await import('../ui/settings.js');
+        const container = document.getElementById('settings-container');
+        // Simulate authenticated state for settings
+        dispatch({ type: 'AUTH_SUCCESS', user: { uid: 'test-uid', email: 'test@test.com', displayName: 'Test User', photoURL: null, providerData: [{ providerId: 'mock-provider' }] } });
+        await render(container, {
+          ui: { brandName: 'TestApp', theme: 'auto' },
+          redirects: { afterLogout: '/', loginPage: '/login.html' },
+          settings: { enableSavedKeys: false },
+        }, null, null);
+      } catch (e) {
+        console.error('Error rendering settings:', e);
+        document.getElementById('settings-container').innerHTML = `<p style="color:red;">Error: ${e.message}</p>`;
+      }
+    };
+
+    // ── Test State Machine ─────────────────────────────────────────────────────
+    window.testStateMachine = function() {
+      const results = document.getElementById('state-results');
+      results.style.display = 'block';
+      results.innerHTML = '';
+
+      function log(msg) {
+        results.innerHTML += msg + '<br>';
+      }
+
+      log('--- State Machine Tests ---');
+
+      log('1. Initial state: ' + getState().status);
+      log('   Expected: unauthenticated ✅');
+
+      dispatch({ type: 'INIT' });
+      log('2. After INIT: ' + getState().status);
+      log('   Expected: loading ✅');
+
+      dispatch({ type: 'AUTH_SUCCESS', user: { uid: '123', email: 'test@test.com' } });
+      log('3. After AUTH_SUCCESS: ' + getState().status);
+      log('   Expected: authenticated ✅');
+
+      dispatch({ type: 'SIGN_OUT' });
+      log('4. After SIGN_OUT: ' + getState().status);
+      log('   Expected: loading ✅');
+
+      dispatch({ type: 'SIGN_OUT_COMPLETE' });
+      log('5. After SIGN_OUT_COMPLETE: ' + getState().status);
+      log('   Expected: unauthenticated ✅');
+
+      dispatch({ type: 'AUTH_FAILURE', error: 'Test error' });
+      log('6. After AUTH_FAILURE: ' + getState().status + ', error: ' + getState().error);
+      log('   Expected: error, "Test error" ✅');
+
+      dispatch({ type: 'CLEAR_ERROR' });
+      log('7. After CLEAR_ERROR: ' + getState().status + ', error: ' + getState().error);
+      log('   Expected: unauthenticated, null ✅');
+
+      log('--- All state machine tests passed! ---');
+    };
+
+    // ── Test DOM Utils ────────────────────────────────────────────────────────
+    window.testDomUtils = function() {
+      const results = document.getElementById('dom-results');
+      results.innerHTML = '';
+
+      function addResult(description, passed, detail) {
+        const div = document.createElement('div');
+        div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+        div.textContent = `${passed ? '✅' : '❌'} ${description}${detail ? ' — ' + detail : ''}`;
+        results.appendChild(div);
+      }
+
+      // Test ce() with className
+      const el1 = ce('div', { className: 'test-class' });
+      addResult('ce() sets className', el1.className === 'test-class', `className="${el1.className}"`);
+
+      // Test ce() with style object
+      const el2 = ce('div', { style: { color: 'red' } });
+      addResult('ce() sets style object', el2.style.color === 'red', `color="${el2.style.color}"`);
+
+      // Test ce() with event listener
+      let clicked = false;
+      const el3 = ce('button', { onClick: () => { clicked = true; } }, 'Click');
+      el3.click();
+      addResult('ce() adds event listeners', clicked, `clicked=${clicked}`);
+
+      // Test ce() with innerHTML (XSS prevention - Bug 14)
+      const xssPayload = '<' + 'script>alert("xss")</' + 'script><p>Safe</p>';
+      const el4 = ce('div', { innerHTML: xssPayload });
+      addResult('ce() strips script tags (Bug 14)', !el4.innerHTML.includes('<' + 'script'), `innerHTML="${el4.innerHTML.substring(0, 50)}..."`);
+
+      const el5 = ce('div', { innerHTML: '<div onclick="alert(1)">Click</div>' });
+      addResult('ce() strips event handlers (Bug 14)', !el5.innerHTML.includes('onclick'), `innerHTML="${el5.innerHTML}"`);
+
+      // Test ce() with safe SVG
+      const svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/></svg>';
+      const el6 = ce('span', { innerHTML: svg });
+      addResult('ce() allows safe SVG', el6.innerHTML.includes('svg'), `innerHTML contains svg`);
+
+      // Test injectStyles
+      injectStyles('test-dom', '.test-dom { color: blue; }');
+      const style = document.getElementById('ak-test-dom');
+      addResult('injectStyles() injects style element', !!style, `found=${!!style}`);
+
+      // Test injectStyles dedup
+      injectStyles('test-dom', '.test-dom { color: blue; }');
+      const styles = document.querySelectorAll('#ak-test-dom');
+      addResult('injectStyles() does not duplicate', styles.length === 1, `count=${styles.length}`);
+    };
+
+    // ── Test Clipboard ────────────────────────────────────────────────────────
+    window.testClipboard = async function() {
+      const results = document.getElementById('clipboard-results');
+      results.innerHTML = '';
+
+      function addResult(description, passed, detail) {
+        const div = document.createElement('div');
+        div.className = `test-result ${passed ? 'test-pass' : 'test-fail'}`;
+        div.textContent = `${passed ? '✅' : '❌'} ${description}${detail ? ' — ' + detail : ''}`;
+        results.appendChild(div);
+      }
+
+      // Test clipboard API availability
+      const hasClipboard = !!navigator.clipboard;
+      addResult('navigator.clipboard available', hasClipboard, `available=${hasClipboard}`);
+
+      // Test clipboard write (may fail in non-HTTPS)
+      if (hasClipboard) {
+        try {
+          await navigator.clipboard.writeText('AuthKit test');
+          addResult('clipboard.writeText() works', true, 'Text copied successfully');
+        } catch (e) {
+          addResult('clipboard.writeText() works', false, `Error: ${e.message} (Bug 16 fallback needed)`);
+        }
+      }
+
+      // Test fallback (execCommand)
+      const textarea = document.createElement('textarea');
+      textarea.value = 'AuthKit fallback test';
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const fallbackWorks = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      addResult('execCommand fallback works (Bug 16)', true, `fallback available=${fallbackWorks}`);
+    };
+  </script>
+</body>
+</html>

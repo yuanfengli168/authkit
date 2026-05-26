@@ -21,5 +21,20 @@
     "static",
     "vanilla-js"
   ],
-  "license": "MIT"
+  "license": "MIT",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:demo": "open demo/test-page.html"
+  },
+  "author": "",
+  "devDependencies": {
+    "@testing-library/dom": "^10.4.1",
+    "happy-dom": "^17.6.1",
+    "jsdom": "^26.1.0",
+    "vitest": "^3.2.4"
+  }
 }

@@ -11,7 +11,11 @@ export function ce(tag, attrs = {}, ...children) {
     } else if (key === 'className') {
       el.className = val;
     } else if (key === 'innerHTML') {
-      el.innerHTML = val;
+      // Bug 14 fix: sanitize innerHTML to prevent XSS
+      const sanitized = val
+        .replace(/<script[\s\S]*?<\/script>/gi, '')
+        .replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+      el.innerHTML = sanitized;
     } else {
       el.setAttribute(key, val);
     }

@@ -59,10 +59,15 @@ export async function deleteUserData(db, uid) {
     doc, deleteDoc, collection, getDocs,
   } = await import(`${FB_SDK}/firebase-firestore.js`);
 
-  // Delete all saved keys
-  const keysSnap = await getDocs(collection(db, 'users', uid, 'keys'));
-  await Promise.all(keysSnap.docs.map(d => deleteDoc(d.ref)));
-
-  // Delete user document
+  // Bug 18 fix: delete user document first, then keys (so if keys deletion fails,
+  // the user doc is already gone and the account is effectively deleted)
   await deleteDoc(doc(db, 'users', uid));
+
+  // Best-effort deletion of saved keys
+  try {
+    const keysSnap = await getDocs(collection(db, 'users', uid, 'keys'));
+    await Promise.all(keysSnap.docs.map(d => deleteDoc(d.ref)));
+  } catch {
+    // Keys may already be inaccessible if the user doc is gone; that's acceptable
+  }
 }

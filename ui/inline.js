@@ -1,5 +1,6 @@
 import { injectStyles, ce } from '../utils/dom.js';
 import { dispatch, subscribe } from '../core/state.js';
+import { ensureBaseCSS } from '../core/base-css.js';
 import { renderProviderButton } from './components/provider-button.js';
 import { renderEmailForm } from './components/email-form.js';
 
@@ -56,7 +57,18 @@ const INLINE_CSS = `
 `;
 
 export function createInline(anchor, config) {
+  ensureBaseCSS();
   injectStyles('inline', INLINE_CSS);
+
+  // Bug 3 fix: read from config.ui.* with fallback to top-level config
+  const ui = config.ui ?? {};
+  const _brandName = ui.brandName || config.brandName || '';
+  const _logoUrl = ui.logoUrl ?? config.logoUrl ?? null;
+  const _brandEmoji = ui.brandEmoji ?? config.brandEmoji ?? null;
+  const _loginTitle = ui.loginTitle ?? config.loginTitle ?? null;
+  const _loginSubtitle = ui.loginSubtitle ?? config.loginSubtitle ?? '';
+  const _theme = ui.theme ?? config.theme ?? 'auto';
+  const _googleAuthMode = config.googleAuthMode ?? 'popup';
 
   let _providers = [];
   let _auth = null;
@@ -65,7 +77,7 @@ export function createInline(anchor, config) {
 
   // Apply data-authkit to anchor
   anchor.setAttribute('data-authkit', '');
-  if (config.theme) anchor.setAttribute('data-theme', config.theme);
+  if (_theme && _theme !== 'auto') anchor.setAttribute('data-theme', _theme);
 
   function render() {
     anchor.innerHTML = '';
@@ -74,10 +86,10 @@ export function createInline(anchor, config) {
 
     const header = ce('div', { className: 'ak-inline-header' });
     const titleEl = ce('h2', { className: 'ak-inline-title' },
-      config.loginTitle || `Sign in to ${config.brandName || 'continue'}`
+      _loginTitle || `Sign in to ${_brandName || 'continue'}`
     );
     const subtitleEl = ce('p', { className: 'ak-inline-subtitle' },
-      config.loginSubtitle || ''
+      _loginSubtitle || ''
     );
     header.append(titleEl, subtitleEl);
 
@@ -93,7 +105,7 @@ export function createInline(anchor, config) {
       const btn = renderProviderButton(provider, async (p) => {
         dispatch({ type: 'PROVIDER_START', provider: p.id });
         try {
-          await p.signIn(_auth, { mode: config.googleAuthMode || 'popup' });
+          await p.signIn(_auth, { mode: _googleAuthMode });
         } catch (e) {
           if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
             statusEl.textContent = e.message || 'Sign in failed.';

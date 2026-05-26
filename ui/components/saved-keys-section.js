@@ -69,9 +69,23 @@ export function renderSavedKeysSection(user, db, collectionName) {
 
     const copyBtn = ce('button', { className: 'ak-key-action', type: 'button', title: 'Copy', 'aria-label': 'Copy value' }, '📋');
     copyBtn.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(k.value);
-      copyBtn.textContent = '✅';
-      setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
+      try {
+        await navigator.clipboard.writeText(k.value);
+        copyBtn.textContent = '✅';
+        setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
+      } catch {
+        // Bug 16 fix: fallback for non-HTTPS contexts where clipboard API is unavailable
+        const textarea = document.createElement('textarea');
+        textarea.value = k.value;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textarea);
+        copyBtn.textContent = '✅';
+        setTimeout(() => { copyBtn.textContent = '📋'; }, 1500);
+      }
     });
 
     const delBtn = ce('button', { className: 'ak-key-action ak-key-action--delete', type: 'button', title: 'Delete', 'aria-label': 'Delete key' }, '🗑');

@@ -1,6 +1,6 @@
 // core/session.js — Firebase auth wiring, persistence, token refresh
 
-import { dispatch } from './state.js';
+import { dispatch, getState } from './state.js';
 import { handlePostLoginRedirect } from '../utils/redirect.js';
 
 const FB_SDK = 'https://www.gstatic.com/firebasejs/10.12.0';
@@ -47,6 +47,8 @@ export async function initSession(firebaseConfig, callbacks = {}, googleAuthMode
   // Wire persistent auth state listener
   onAuthStateChanged(_auth, (firebaseUser) => {
     if (firebaseUser) {
+      // Bug 9 fix: skip if already authenticated (e.g. from getRedirectResult)
+      if (getState().status === 'authenticated') return;
       const user = serializeUser(firebaseUser);
       dispatch({ type: 'AUTH_SUCCESS', user });
       if (typeof callbacks.onLogin === 'function') callbacks.onLogin(user);

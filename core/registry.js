@@ -8,6 +8,10 @@ const _static = new Map();       // id → pre-registered module (for UMD)
  * baseUrl: e.g. 'https://cdn.example.com/authkit' or '.' (relative)
  */
 export async function loadProvider(id, baseUrl = '.') {
+  // Bug 15 fix: validate provider ID to prevent path traversal
+  if (!/^[a-z0-9_-]+$/i.test(id)) {
+    throw new Error(`[AuthKit] Invalid provider id: "${id}"`);
+  }
   if (_cache.has(id)) return _cache.get(id);
   if (_static.has(id)) {
     const mod = _static.get(id);
